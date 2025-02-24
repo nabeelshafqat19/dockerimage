@@ -5,42 +5,16 @@ variables:
   dockerId: 'kokoopoli'
   imageRepository: 'todolist-app'
   tag: '$(Build.BuildId)'
-  dockerHost: 'npipe:////./pipe/docker_engine'  # Changed to named pipes
 
 stages:
 - stage: BuildAndRun
-  displayName: Build and Run Container
+  displayName: Docker Build/Push
   jobs:
   - job: DockerJob
-    displayName: Docker Operations
     pool: todopull
-    
     steps:
-    # Check Docker connectivity first
-    - powershell: |
-        Write-Host "Docker version:"
-        docker --version
-        Write-Host "Docker system info:"
-        docker system info
-        Write-Host "Existing containers:"
-        docker ps -a
-      displayName: Verify Docker Installation
-      env:
-        DOCKER_HOST: $(dockerHost)
-
-    # Modified cleanup with error suppression
-    - powershell: |
-        try {
-          docker rm -f myapp-container 2>&1 | Out-Null
-        } catch {
-          Write-Host "No containers to remove"
-        }
-      displayName: Safe Container Cleanup
-      env:
-        DOCKER_HOST: $(dockerHost)
-
     - task: Docker@2
-      displayName: Login to Docker Hub
+      displayName: Docker Login
       inputs:
         command: login
         containerRegistry: 'dockerhub-service'
@@ -49,20 +23,16 @@ stages:
       displayName: Build and Push
       inputs:
         command: buildAndPush
-        repository: $(imageRepository)
+        repository: $(dockerId)/$(imageRepository)
         dockerfile: 'Dockerfile'
         containerRegistry: 'dockerhub-service'
-        tags: $(tag)
+        tags: |
+          $(tag)
+          latest
 
     - powershell: |
         docker run -d `
-        --name myapp-container `
         -p 3000:3000 `
+        --name test-container `
         $(dockerId)/$(imageRepository):$(tag)
-        
-        Start-Sleep -Seconds 10
-        docker logs myapp-container
-        docker inspect myapp-container --format='{{.State.Status}}' | Out-Host
-      displayName: Run Container
-      env:
-        DOCKER_HOST: $(dockerHost)
+      displayName: Test Container
