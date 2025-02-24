@@ -1,10 +1,11 @@
 trigger:
-- main  # Trigger on main branch changes
+- main
 
 variables:
-  dockerId: 'kokopoli'    # Replace with your Docker Hub ID
-  imageRepository: 'todolist_app'     # Replace with your image name
-  tag: '$(Build.BuildId)'               # Unique tag for each build
+  dockerId: 'kokoopoli'  # Replace with yours
+  imageRepository: 'todolist-app'   # Replace with yours
+  tag: '$(Build.BuildId)'
+  dockerHost: 'tcp://localhost:2375'   # Windows Docker daemon endpoint
 
 stages:
 - stage: BuildAndRun
@@ -12,42 +13,47 @@ stages:
   jobs:
   - job: DockerJob
     displayName: Docker Operations
-    pool: todopull  # Using your self-hosted agent pool 🎯
+    pool: todopull
     
     steps:
-    # Cleanup any existing containers (optional)
-    - script: |
-        docker stop myapp-container || true
-        docker rm myapp-container || true
-      displayName: Cleanup Previous Containers
+    # Cleanup existing containers (Windows compatible)
+    - powershell: |
+        docker rm -f myapp-container 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { Write-Host "No existing container found" }
+      displayName: Cleanup Containers
+      env:
+        DOCKER_HOST: $(dockerHost)
 
-    # Authenticate with Docker Hub
+    # Docker login task
     - task: Docker@2
       displayName: Login to Docker Hub
       inputs:
         command: login
         containerRegistry: 'dockerhub-service'
 
-    # Build and Push Docker Image
+    # Build and push image
     - task: Docker@2
       displayName: Build and Push Image
       inputs:
         command: buildAndPush
         repository: $(imageRepository)
-        dockerfile: 'Dockerfile'  # Path to your Dockerfile
+        dockerfile: 'Dockerfile'
         containerRegistry: 'dockerhub-service'
         tags: |
           $(tag)
           latest
 
-    # Run the Container
-    - script: |
-        docker run -d \
-        --name myapp-container \
-        -p 3000:3000 \
+    # Run container with Windows configuration
+    - powershell: |
+        docker run -d `
+        --name myapp-container `
+        -p 3000:3000 `
+        --restart unless-stopped `
         $(dockerId)/$(imageRepository):$(tag)
         
-        # Verify container status
-        docker ps | grep myapp-container
+        Start-Sleep -Seconds 5
+        docker ps
         docker logs myapp-container
       displayName: Run and Verify Container
+      env:
+        DOCKER_HOST: $(dockerHost)
