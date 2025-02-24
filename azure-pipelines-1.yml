@@ -2,8 +2,8 @@ trigger:
 - main
 
 variables:
-  dockerId: "kokoopoli"
-  imageRepository: "todolist-app"
+  dockerId: "kokoopoli"  # Exact Docker Hub username
+  imageRepository: "todolist-app"  # Exact repo name
   tag: "$(Build.BuildId)"
 
 stages:
@@ -16,7 +16,7 @@ stages:
       displayName: Login to Docker Hub
       inputs:
         command: login
-        containerRegistry: "dockerhub-service"
+        containerRegistry: "dockerhub-service"  # Using access token
 
     - task: Docker@2
       displayName: Build and Push
