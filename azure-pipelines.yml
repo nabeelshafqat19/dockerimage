@@ -7,7 +7,7 @@ trigger:
 - master
 
 pool:
-  vmImage: ubuntu-latest
+  pool: todopull
 
 steps:
 - script: echo Hello, world!
