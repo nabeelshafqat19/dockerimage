@@ -8,13 +8,12 @@ variables:
 
 stages:
 - stage: BuildAndPush
-  displayName: Docker Build/Push
   jobs:
   - job: DockerJob
     pool: todopull
     steps:
     - task: Docker@2
-      displayName: Login to Docker Hub
+      displayName: Docker Login
       inputs:
         command: login
         containerRegistry: "dockerhub-service"
