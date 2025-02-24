@@ -2,10 +2,10 @@ trigger:
 - main
 
 variables:
-  dockerId: 'kokoopoli'  # Replace with yours
-  imageRepository: 'todolist-app'   # Replace with yours
+  dockerId: 'kokoopoli'
+  imageRepository: 'todolist-app'
   tag: '$(Build.BuildId)'
-  dockerHost: 'tcp://localhost:2375'   # Windows Docker daemon endpoint
+  dockerHost: 'npipe:////./pipe/docker_engine'  # Changed to named pipes
 
 stages:
 - stage: BuildAndRun
@@ -16,44 +16,53 @@ stages:
     pool: todopull
     
     steps:
-    # Cleanup existing containers (Windows compatible)
+    # Check Docker connectivity first
     - powershell: |
-        docker rm -f myapp-container 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) { Write-Host "No existing container found" }
-      displayName: Cleanup Containers
+        Write-Host "Docker version:"
+        docker --version
+        Write-Host "Docker system info:"
+        docker system info
+        Write-Host "Existing containers:"
+        docker ps -a
+      displayName: Verify Docker Installation
       env:
         DOCKER_HOST: $(dockerHost)
 
-    # Docker login task
+    # Modified cleanup with error suppression
+    - powershell: |
+        try {
+          docker rm -f myapp-container 2>&1 | Out-Null
+        } catch {
+          Write-Host "No containers to remove"
+        }
+      displayName: Safe Container Cleanup
+      env:
+        DOCKER_HOST: $(dockerHost)
+
     - task: Docker@2
       displayName: Login to Docker Hub
       inputs:
         command: login
         containerRegistry: 'dockerhub-service'
 
-    # Build and push image
     - task: Docker@2
-      displayName: Build and Push Image
+      displayName: Build and Push
       inputs:
         command: buildAndPush
         repository: $(imageRepository)
         dockerfile: 'Dockerfile'
         containerRegistry: 'dockerhub-service'
-        tags: |
-          $(tag)
-          latest
+        tags: $(tag)
 
-    # Run container with Windows configuration
     - powershell: |
         docker run -d `
         --name myapp-container `
         -p 3000:3000 `
-        --restart unless-stopped `
         $(dockerId)/$(imageRepository):$(tag)
         
-        Start-Sleep -Seconds 5
-        docker ps
+        Start-Sleep -Seconds 10
         docker logs myapp-container
-      displayName: Run and Verify Container
+        docker inspect myapp-container --format='{{.State.Status}}' | Out-Host
+      displayName: Run Container
       env:
         DOCKER_HOST: $(dockerHost)
