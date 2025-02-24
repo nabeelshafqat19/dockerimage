@@ -1,25 +1,31 @@
+trigger:
+- main
+
 variables:
-  dockerId: 'kokoopoli'  # Must match your Docker Hub username exactly
-  imageRepository: 'todolist-app'  # Must match existing Docker Hub repo
-  tag: '$(Build.BuildId)'
+  dockerId: "kokoopoli"  # Case-sensitive
+  imageRepository: "todolist-app"  # Must exist on Docker Hub
+  tag: "$(Build.BuildId)"
 
 stages:
-- stage: BuildAndRun
+- stage: BuildAndPush
+  displayName: Build and Push
   jobs:
   - job: DockerJob
-    pool: todopull
+    pool: todopull  # Your self-hosted pool
     steps:
     - task: Docker@2
       displayName: Login to Docker Hub
       inputs:
         command: login
-        containerRegistry: 'dockerhub-service'  # Verify this connection
+        containerRegistry: "dockerhub-service"  # Verified service connection
 
     - task: Docker@2
       displayName: Build and Push
       inputs:
         command: buildAndPush
         repository: $(dockerId)/$(imageRepository)  # Correct format
-        dockerfile: 'Dockerfile'
-        containerRegistry: 'dockerhub-service'
-        tags: $(tag)
+        dockerfile: "Dockerfile"
+        containerRegistry: "dockerhub-service"
+        tags: |
+          $(tag)
+          latest  # Optional
