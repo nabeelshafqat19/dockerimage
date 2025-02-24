@@ -1,38 +1,25 @@
-trigger:
-- main
-
 variables:
-  dockerId: 'kokoopoli'
-  imageRepository: 'todolist-app'
+  dockerId: 'kokoopoli'  # Must match your Docker Hub username exactly
+  imageRepository: 'todolist-app'  # Must match existing Docker Hub repo
   tag: '$(Build.BuildId)'
 
 stages:
 - stage: BuildAndRun
-  displayName: Docker Build/Push
   jobs:
   - job: DockerJob
     pool: todopull
     steps:
     - task: Docker@2
-      displayName: Docker Login
+      displayName: Login to Docker Hub
       inputs:
         command: login
-        containerRegistry: 'dockerhub-service'
+        containerRegistry: 'dockerhub-service'  # Verify this connection
 
     - task: Docker@2
       displayName: Build and Push
       inputs:
         command: buildAndPush
-        repository: $(dockerId)/$(imageRepository)
+        repository: $(dockerId)/$(imageRepository)  # Correct format
         dockerfile: 'Dockerfile'
         containerRegistry: 'dockerhub-service'
-        tags: |
-          $(tag)
-          latest
-
-    - powershell: |
-        docker run -d `
-        -p 3000:3000 `
-        --name test-container `
-        $(dockerId)/$(imageRepository):$(tag)
-      displayName: Test Container
+        tags: $(tag)
