@@ -6,7 +6,7 @@ resources:
 
 variables:
   tag: '$(Build.BuildId)'
-  imageName: 'todoapplists'
+  imageName: 'todolistapplication'
 
 stages:
 - stage: Build
@@ -15,7 +15,7 @@ stages:
   - job: Build
     displayName: Build
     pool:
-      name: 'todopull'
+     name: 'todopull'
     steps:
     - task: Docker@2
       displayName: Build an image
@@ -24,6 +24,14 @@ stages:
         dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
         tags: |
           $(imageName):$(tag)
+    - task: Docker@2
+      displayName: Save Docker image as artifact
+      inputs:
+        command: save
+        image: '$(imageName):$(tag)'
+        saveAs: '$(Build.ArtifactStagingDirectory)/$(imageName).tar'
+    - publish: $(Build.ArtifactStagingDirectory)
+      artifact: dockerImage
 
 - stage: Notify
   displayName: Notify
@@ -34,9 +42,8 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     - script: |
-        echo "The Docker image has been built successfully."
-        echo "To run the image locally, follow these steps:"
-        echo "1. Ensure Docker is running on your desktop."
-        echo "2. Pull the image from the Azure DevOps Pipeline: docker pull $(Build.SourcesDirectory)/$(imageName):$(tag)"
-        echo "3. Run the container: docker run -d -p 8080:8080 $(imageName):$(tag)"
+        echo "The Docker image has been built and saved as an artifact."
+        echo "Download the artifact and load it into your local Docker:"
+        echo "1. Download the .tar file from Azure DevOps artifacts."
+        echo "2. Load the image into Docker: docker load -i todolistapplication.tar"
       displayName: Print instructions
