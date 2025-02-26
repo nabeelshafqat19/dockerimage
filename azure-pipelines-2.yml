@@ -24,22 +24,14 @@ stages:
         dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
         tags: |
           $(imageName):$(tag)
-    - task: Docker@2
-      displayName: Save Docker image as artifact
-      inputs:
-        command: save
-        image: '$(imageName):$(tag)'
-        saveAs: '$(Build.ArtifactStagingDirectory)/$(imageName).tar'
-    - publish: $(Build.ArtifactStagingDirectory)
-      artifact: dockerImage
-
+          
 - stage: Notify
   displayName: Notify
   jobs:
   - job: Notify
     displayName: Notify
     pool:
-      vmImage: 'ubuntu-latest'
+      name: 'todopull'
     steps:
     - script: |
         echo "The Docker image has been built and saved as an artifact."
